@@ -41,6 +41,9 @@ interface StudyPlanDao {
 
     @Query("UPDATE study_plans SET isCompleted = :isCompleted WHERE id = :planId")
     suspend fun updatePlanCompletion(planId: String, isCompleted: Boolean)
+
+    @Query("DELETE FROM study_plans WHERE id = :planId")
+    suspend fun deletePlan(planId: String)
 }
 
 @Dao

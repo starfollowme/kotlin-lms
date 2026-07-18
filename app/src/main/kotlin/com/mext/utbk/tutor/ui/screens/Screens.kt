@@ -998,10 +998,14 @@ fun PlannerScreen(
 ) {
     val plans by viewModel.plans.collectAsState()
 
+    var targetText by remember { mutableStateOf("") }
+    val daysList = listOf("Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu")
+    var selectedDay by remember { mutableStateOf("Senin") }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Rencana Belajar") },
+                title = { Text("Rencana Belajar", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
@@ -1015,8 +1019,76 @@ fun PlannerScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // New Plan Creator Card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Tambah Target Belajar Baru",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        OutlinedTextField(
+                            value = targetText,
+                            onValueChange = { targetText = it },
+                            placeholder = { Text("Misal: Latihan Turunan Kalkulus") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Text(
+                            text = "Pilih Hari:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+
+                        androidx.compose.foundation.lazy.LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(daysList) { day ->
+                                val isSelected = selectedDay == day
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { selectedDay = day },
+                                    label = { Text(day) },
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                if (targetText.isNotBlank()) {
+                                    viewModel.addPlan(selectedDay, targetText)
+                                    targetText = ""
+                                }
+                            },
+                            enabled = targetText.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Add, contentDescription = "Tambah")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Simpan ke Rencana", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
             item {
                 Text(
                     text = "Rencana Belajar Mingguan Anda",
@@ -1024,36 +1096,64 @@ fun PlannerScreen(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.height(8.dp))
             }
 
-            items(plans) { plan ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+            if (plans.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Checkbox(
-                            checked = plan.isCompleted,
-                            onCheckedChange = { viewModel.togglePlan(plan.id) }
+                        Text(
+                            text = "Belum ada rencana belajar. Buat rencana di atas!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = plan.day,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
+                    }
+                }
+            } else {
+                items(plans) { plan ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = plan.isCompleted,
+                                onCheckedChange = { viewModel.togglePlan(plan.id) }
                             )
-                            Text(
-                                text = plan.target,
-                                style = MaterialTheme.typography.bodyLarge,
-                                textDecoration = if (plan.isCompleted) androidx.compose.ui.text.style.TextDecoration.LineThrough else null
-                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = plan.day,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = plan.target,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    textDecoration = if (plan.isCompleted) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
+                                    color = if (plan.isCompleted) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            IconButton(onClick = { viewModel.deletePlan(plan.id) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Hapus Rencana",
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                                )
+                            }
                         }
                     }
                 }

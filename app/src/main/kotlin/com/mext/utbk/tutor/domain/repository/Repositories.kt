@@ -27,4 +27,5 @@ interface PlannerRepository {
     suspend fun getStudyPlans(): List<StudyPlan>
     suspend fun addStudyPlan(plan: StudyPlan)
     suspend fun togglePlanCompletion(planId: String)
+    suspend fun deleteStudyPlan(planId: String)
 }

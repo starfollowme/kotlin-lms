@@ -207,4 +207,8 @@ class PlannerRepositoryImpl(private val studyPlanDao: StudyPlanDao) : PlannerRep
         val target = entities.find { it.id == planId } ?: return
         studyPlanDao.updatePlanCompletion(planId, !target.isCompleted)
     }
+
+    override suspend fun deleteStudyPlan(planId: String) {
+        studyPlanDao.deletePlan(planId)
+    }
 }

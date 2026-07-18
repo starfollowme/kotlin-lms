@@ -210,4 +210,19 @@ class PlannerViewModel(private val repository: PlannerRepository) : ViewModel() 
             loadPlans() // Reload after modification
         }
     }
+
+    fun addPlan(day: String, target: String) {
+        viewModelScope.launch {
+            val plan = StudyPlan("p_${System.currentTimeMillis()}", day, target, false)
+            repository.addStudyPlan(plan)
+            loadPlans()
+        }
+    }
+
+    fun deletePlan(id: String) {
+        viewModelScope.launch {
+            repository.deleteStudyPlan(id)
+            loadPlans()
+        }
+    }
 }
