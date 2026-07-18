@@ -6,6 +6,10 @@ interface MaterialRepository {
     suspend fun getSubjects(): List<Subject>
     suspend fun getTopics(subjectId: String): List<Topic>
     suspend fun getTopicDetail(subjectId: String, topicId: String): Topic?
+    suspend fun bookmarkTopic(topic: Topic)
+    suspend fun unbookmarkTopic(topic: Topic)
+    suspend fun isBookmarked(topicId: String): Boolean
+    suspend fun getBookmarkedTopics(): List<Topic>
 }
 
 interface QuizRepository {

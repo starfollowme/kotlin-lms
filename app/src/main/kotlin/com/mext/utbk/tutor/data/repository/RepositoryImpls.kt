@@ -6,7 +6,7 @@ import com.mext.utbk.tutor.domain.model.*
 import com.mext.utbk.tutor.domain.repository.*
 import kotlinx.coroutines.flow.first
 
-class MaterialRepositoryImpl : MaterialRepository {
+class MaterialRepositoryImpl(private val bookmarkDao: BookmarkDao) : MaterialRepository {
     override suspend fun getSubjects(): List<Subject> {
         return listOf(
             Subject("utbk_mat", "Matematika UTBK", "UTBK", "Materi TPS Kuantitatif & Matematika UTBK"),
@@ -33,6 +33,50 @@ class MaterialRepositoryImpl : MaterialRepository {
                     "Konsep ini sangat sering diuji baik di UTBK maupun ujian beasiswa MEXT.",
             summary = "Ringkasan Cepat: Persamaan kuadrat ax^2 + bx + c = 0 memiliki dua akar."
         )
+    }
+
+    override suspend fun bookmarkTopic(topic: Topic) {
+        bookmarkDao.insertBookmark(
+            BookmarkEntity(
+                id = topic.id,
+                subjectId = topic.subjectId,
+                topicId = topic.id,
+                title = topic.title,
+                content = topic.content,
+                summary = topic.summary,
+                timestamp = System.currentTimeMillis()
+            )
+        )
+    }
+
+    override suspend fun unbookmarkTopic(topic: Topic) {
+        bookmarkDao.deleteBookmark(
+            BookmarkEntity(
+                id = topic.id,
+                subjectId = topic.subjectId,
+                topicId = topic.id,
+                title = topic.title,
+                content = topic.content,
+                summary = topic.summary,
+                timestamp = 0L
+            )
+        )
+    }
+
+    override suspend fun isBookmarked(topicId: String): Boolean {
+        return bookmarkDao.isBookmarked(topicId)
+    }
+
+    override suspend fun getBookmarkedTopics(): List<Topic> {
+        return bookmarkDao.getAllBookmarks().first().map {
+            Topic(
+                id = it.id,
+                subjectId = it.subjectId,
+                title = it.title,
+                content = it.content,
+                summary = it.summary
+            )
+        }
     }
 }
 

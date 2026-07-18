@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
@@ -315,12 +316,14 @@ fun MaterialsScreen(
     onBack: () -> Unit
 ) {
     val subjects by viewModel.subjects.collectAsState()
+    val topics by viewModel.topics.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) } // 0 = UTBK, 1 = MEXT
+    var expandedSubjectId by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Materi Belajar") },
+                title = { Text("Materi Belajar", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
@@ -337,12 +340,18 @@ fun MaterialsScreen(
             TabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
+                    onClick = { 
+                        selectedTab = 0 
+                        expandedSubjectId = null
+                    },
                     text = { Text("UTBK") }
                 )
                 Tab(
                     selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
+                    onClick = { 
+                        selectedTab = 1 
+                        expandedSubjectId = null
+                    },
                     text = { Text("MEXT Beasiswa") }
                 )
             }
@@ -357,25 +366,98 @@ fun MaterialsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(filteredSubjects) { subject ->
+                    val isExpanded = subject.id == expandedSubjectId
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                viewModel.loadTopics(subject.id)
-                                // Navigate to first topic of this subject for placeholder
-                                onNavigateToTopic(subject.id, "t1")
+                                if (isExpanded) {
+                                    expandedSubjectId = null
+                                } else {
+                                    expandedSubjectId = subject.id
+                                    viewModel.loadTopics(subject.id)
+                                }
                             },
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isExpanded) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = if (isExpanded) 4.dp else 1.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        border = if (isExpanded) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)) else null
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(text = subject.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = subject.description,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(text = subject.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = subject.description,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    )
+                                }
+                                Icon(
+                                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            if (isExpanded) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                                Spacer(modifier = Modifier.height(8.dp))
+                                
+                                val isLoading = topics.isEmpty() || topics.firstOrNull()?.subjectId != subject.id
+                                if (isLoading) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                    }
+                                } else {
+                                    topics.forEach { topic ->
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp)
+                                                .clickable { onNavigateToTopic(subject.id, topic.id) },
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                            shape = RoundedCornerShape(12.dp),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(16.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(text = topic.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    Text(
+                                                        text = topic.summary.take(80) + if (topic.summary.length > 80) "..." else "", 
+                                                        style = MaterialTheme.typography.bodySmall, 
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                                    )
+                                                }
+                                                Icon(
+                                                    imageVector = Icons.Default.PlayArrow,
+                                                    contentDescription = "Buka",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -390,21 +472,34 @@ fun MaterialDetailScreen(
     subjectId: String,
     topicId: String,
     viewModel: MaterialViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateToQuiz: () -> Unit
 ) {
     LaunchedEffect(subjectId, topicId) {
         viewModel.loadTopicDetail(subjectId, topicId)
     }
 
     val currentTopic by viewModel.currentTopic.collectAsState()
+    val isBookmarked by viewModel.isCurrentTopicBookmarked.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(currentTopic?.title ?: "Membaca Materi") },
+                title = { Text(currentTopic?.title ?: "Membaca Materi", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                    }
+                },
+                actions = {
+                    currentTopic?.let { topic ->
+                        IconButton(onClick = { viewModel.toggleBookmark(topic) }) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                                contentDescription = if (isBookmarked) "Hapus Bookmark" else "Simpan Bookmark",
+                                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             )
@@ -415,42 +510,93 @@ fun MaterialDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(16.dp)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Penjelasan Materi",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(text = topic.content, style = MaterialTheme.typography.bodyLarge)
+                    // Content Card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Penjelasan Materi",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = topic.content, 
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                                lineHeight = 24.sp
+                            )
+                        }
+                    }
+
+                    // Key Formula & Concept Highlight Box (Amber Styled)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9E6)), // Soft Premium Amber
+                        border = BorderStroke(1.dp, Color(0xFFFFD54F)) // Amber boundary
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Rumus Kunci",
+                                tint = Color(0xFFF57F17),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Rumus & Konsep Kunci",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color(0xFF5D4037)
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = topic.summary,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color(0xFF4E342E),
+                                    lineHeight = 20.sp
+                                )
+                            }
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
+                // Start Quiz Button
+                Button(
+                    onClick = onNavigateToQuiz,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Ringkasan Cepat",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(text = topic.summary, style = MaterialTheme.typography.bodyMedium)
-                    }
+                    Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Mulai Kuis")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Mulai Kuis Bab Ini",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium
+                    )
                 }
             }
         } ?: Box(

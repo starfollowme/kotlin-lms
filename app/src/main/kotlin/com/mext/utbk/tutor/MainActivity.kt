@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         val database = AppDatabase.getDatabase(applicationContext)
 
         // Inisialisasi Repositori dengan DAO masing-masing
-        val materialRepository = MaterialRepositoryImpl()
+        val materialRepository = MaterialRepositoryImpl(database.bookmarkDao())
         val quizRepository = QuizRepositoryImpl(database.historyDao())
         val chatRepository = ChatRepositoryImpl(database.chatDao())
         val plannerRepository = PlannerRepositoryImpl(database.studyPlanDao())

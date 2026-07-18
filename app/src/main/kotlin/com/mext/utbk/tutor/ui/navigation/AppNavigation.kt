@@ -48,7 +48,8 @@ fun AppNavigation(
                 subjectId = subjectId,
                 topicId = topicId,
                 viewModel = materialViewModel,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onNavigateToQuiz = { navController.navigate(Screen.Quiz.route) }
             )
         }
 

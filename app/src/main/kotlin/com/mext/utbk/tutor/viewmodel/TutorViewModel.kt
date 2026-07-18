@@ -18,8 +18,15 @@ class MaterialViewModel(private val repository: MaterialRepository) : ViewModel(
     private val _currentTopic = MutableStateFlow<Topic?>(null)
     val currentTopic: StateFlow<Topic?> = _currentTopic
 
+    private val _isCurrentTopicBookmarked = MutableStateFlow(false)
+    val isCurrentTopicBookmarked: StateFlow<Boolean> = _isCurrentTopicBookmarked
+
+    private val _bookmarkedTopics = MutableStateFlow<List<Topic>>(emptyList())
+    val bookmarkedTopics: StateFlow<List<Topic>> = _bookmarkedTopics
+
     init {
         loadSubjects()
+        loadBookmarkedTopics()
     }
 
     private fun loadSubjects() {
@@ -36,7 +43,37 @@ class MaterialViewModel(private val repository: MaterialRepository) : ViewModel(
 
     fun loadTopicDetail(subjectId: String, topicId: String) {
         viewModelScope.launch {
-            _currentTopic.value = repository.getTopicDetail(subjectId, topicId)
+            val detail = repository.getTopicDetail(subjectId, topicId)
+            _currentTopic.value = detail
+            if (detail != null) {
+                checkIsBookmarked(detail.id)
+            }
+        }
+    }
+
+    fun checkIsBookmarked(topicId: String) {
+        viewModelScope.launch {
+            _isCurrentTopicBookmarked.value = repository.isBookmarked(topicId)
+        }
+    }
+
+    fun toggleBookmark(topic: Topic) {
+        viewModelScope.launch {
+            val currentlyBookmarked = repository.isBookmarked(topic.id)
+            if (currentlyBookmarked) {
+                repository.unbookmarkTopic(topic)
+                _isCurrentTopicBookmarked.value = false
+            } else {
+                repository.bookmarkTopic(topic)
+                _isCurrentTopicBookmarked.value = true
+            }
+            loadBookmarkedTopics() // Refresh bookmarks list
+        }
+    }
+
+    fun loadBookmarkedTopics() {
+        viewModelScope.launch {
+            _bookmarkedTopics.value = repository.getBookmarkedTopics()
         }
     }
 }
