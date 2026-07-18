@@ -12,4 +12,14 @@ sealed class Screen(val route: String, val title: String) {
     object Bookmarks : Screen("bookmarks", "Bookmark")
     object Simulation : Screen("simulation", "Simulasi UTBK/MEXT")
     object Planner : Screen("planner", "Rencana Belajar")
+
+    companion object {
+        val bottomBarScreens = listOf(
+            Home,
+            Materials,
+            Chat,
+            Planner,
+            History
+        )
+    }
 }

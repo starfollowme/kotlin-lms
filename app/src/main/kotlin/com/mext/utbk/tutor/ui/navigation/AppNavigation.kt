@@ -20,28 +20,21 @@ fun AppNavigation(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = "container"
     ) {
-        composable(Screen.Home.route) {
-            HomeScreen(
-                onNavigateToMaterials = { navController.navigate(Screen.Materials.route) },
-                onNavigateToQuiz = { navController.navigate(Screen.Quiz.route) },
-                onNavigateToChat = { navController.navigate(Screen.Chat.route) },
-                onNavigateToPlanner = { navController.navigate(Screen.Planner.route) },
-                onNavigateToSimulation = { navController.navigate(Screen.Simulation.route) }
+        // Halaman container utama yang berisi Bottom Navigation Bar
+        composable("container") {
+            MainContainerScreen(
+                rootNavController = navController,
+                materialViewModel = materialViewModel,
+                quizViewModel = quizViewModel,
+                chatViewModel = chatViewModel,
+                plannerViewModel = plannerViewModel,
+                historyViewModel = plannerViewModel
             )
         }
 
-        composable(Screen.Materials.route) {
-            MaterialsScreen(
-                viewModel = materialViewModel,
-                onNavigateToTopic = { subjectId, topicId ->
-                    navController.navigate(Screen.MaterialDetail.createRoute(subjectId, topicId))
-                },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
+        // Overlay screens (halaman penuh tanpa bottom navigation bar untuk kenyamanan belajar)
         composable(
             route = Screen.MaterialDetail.route,
             arguments = listOf(
@@ -62,20 +55,6 @@ fun AppNavigation(
         composable(Screen.Quiz.route) {
             QuizScreen(
                 viewModel = quizViewModel,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(Screen.Chat.route) {
-            AIChatScreen(
-                viewModel = chatViewModel,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(Screen.Planner.route) {
-            PlannerScreen(
-                viewModel = plannerViewModel,
                 onBack = { navController.popBackStack() }
             )
         }

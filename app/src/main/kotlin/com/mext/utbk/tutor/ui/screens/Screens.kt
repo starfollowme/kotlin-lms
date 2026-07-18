@@ -27,148 +27,239 @@ import com.mext.utbk.tutor.viewmodel.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    materialViewModel: MaterialViewModel,
+    plannerViewModel: PlannerViewModel,
     onNavigateToMaterials: () -> Unit,
     onNavigateToQuiz: () -> Unit,
     onNavigateToChat: () -> Unit,
     onNavigateToPlanner: () -> Unit,
     onNavigateToSimulation: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("MEXT/UTBK Tutor", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                // Welcome banner with premium gradient
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary,
-                                    MaterialTheme.colorScheme.secondary
-                                )
+    val plans by plannerViewModel.plans.collectAsState()
+    val completedCount = plans.count { it.isCompleted }
+    val totalCount = plans.size
+    val progress = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Welcome banner with premium gradient
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.secondary
                             )
                         )
-                        .padding(20.dp),
-                    contentAlignment = Alignment.CenterStart
+                    )
+                    .padding(20.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1.5f)) {
                         Text(
                             text = "Halo, Calon Mahasiswa!",
                             color = Color.White,
-                            fontSize = 22.sp,
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Siap taklukkan ujian MEXT & UTBK hari ini?",
                             color = Color.White.copy(alpha = 0.85f),
-                            fontSize = 14.sp
+                            fontSize = 13.sp
+                        )
+                    }
+                    // Streak badge
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.25f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(text = "🔥 5", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(text = "Streak", color = Color.White, fontSize = 10.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Target progress card
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "Target Belajar Hari Ini", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            text = "${(progress * 100).toInt()}% Selesai",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    LinearProgressIndicator(
+                        progress = progress,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "$completedCount dari $totalCount target mingguan selesai",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+            }
+        }
+
+        // Today's Pending Targets Preview
+        val pendingPlans = plans.filter { !it.isCompleted }.take(2)
+        if (pendingPlans.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Fokus Hari Ini",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            items(pendingPlans) { plan ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = plan.isCompleted,
+                            onCheckedChange = { plannerViewModel.togglePlan(plan.id) }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = plan.target,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
             }
+        }
 
-            item {
-                Text(
-                    text = "Menu Belajar",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 8.dp)
+        // Quick Navigation Menu
+        item {
+            Text(
+                text = "Menu Belajar",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MenuCard(
+                    title = "Materi Belajar",
+                    icon = Icons.Default.Book,
+                    description = "MEXT & UTBK",
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToMaterials
+                )
+                MenuCard(
+                    title = "Latihan Soal",
+                    icon = Icons.Default.PlayArrow,
+                    description = "Kuis Kilat",
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToQuiz
                 )
             }
+        }
 
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    MenuCard(
-                        title = "Materi Belajar",
-                        icon = Icons.Default.Book,
-                        description = "MEXT & UTBK",
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToMaterials
-                    )
-                    MenuCard(
-                        title = "Latihan Soal",
-                        icon = Icons.Default.PlayArrow,
-                        description = "Kuis Kilat",
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToQuiz
-                    )
-                }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MenuCard(
+                    title = "Tutor AI Chat",
+                    icon = Icons.Default.Chat,
+                    description = "Tanya Jawab",
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToChat
+                )
+                MenuCard(
+                    title = "Rencana Belajar",
+                    icon = Icons.Default.DateRange,
+                    description = "Jadwal Belajar",
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToPlanner
+                )
             }
+        }
 
-            item {
+        // Simulasi Ujian banner
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onNavigateToSimulation),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                shape = RoundedCornerShape(16.dp)
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    MenuCard(
-                        title = "Tutor AI Chat",
-                        icon = Icons.Default.Chat,
-                        description = "Tanya Jawab",
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToChat
+                    Icon(
+                        imageVector = Icons.Default.Assignment,
+                        contentDescription = "Simulasi",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(36.dp)
                     )
-                    MenuCard(
-                        title = "Rencana Belajar",
-                        icon = Icons.Default.DateRange,
-                        description = "Jadwal Belajar",
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToPlanner
-                    )
-                }
-            }
-
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onNavigateToSimulation),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Assignment,
-                            contentDescription = "Simulasi",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(36.dp)
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = "Mulai Simulasi Ujian",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium
                         )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text(
-                                text = "Mulai Simulasi Ujian",
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = "Uji kemampuan Anda dengan timer & skor asli",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
+                        Text(
+                            text = "Uji kemampuan Anda dengan timer & skor asli",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             }
