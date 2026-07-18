@@ -17,7 +17,8 @@ fun AppNavigation(
     quizViewModel: QuizViewModel,
     chatViewModel: ChatViewModel,
     plannerViewModel: PlannerViewModel,
-    historyViewModel: HistoryViewModel
+    historyViewModel: HistoryViewModel,
+    simulationViewModel: SimulationViewModel
 ) {
     NavHost(
         navController = navController,
@@ -63,6 +64,7 @@ fun AppNavigation(
 
         composable(Screen.Simulation.route) {
             SimulationScreen(
+                viewModel = simulationViewModel,
                 onBack = { navController.popBackStack() }
             )
         }

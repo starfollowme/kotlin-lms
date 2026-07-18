@@ -17,6 +17,7 @@ interface QuizRepository {
     suspend fun submitQuizResult(score: Int, totalQuestions: Int)
     suspend fun getHistory(): List<HistoryEntry>
     suspend fun clearHistory()
+    suspend fun submitSimulationResult(score: Int, examType: String)
 }
 
 interface ChatRepository {

@@ -125,6 +125,17 @@ class QuizRepositoryImpl(private val historyDao: HistoryDao) : QuizRepository {
     override suspend fun clearHistory() {
         historyDao.clearHistory()
     }
+
+    override suspend fun submitSimulationResult(score: Int, examType: String) {
+        val entry = HistoryEntity(
+            id = "sim_${System.currentTimeMillis()}",
+            type = "QUIZ", // Record as quiz activity type
+            title = "Simulasi Ujian $examType",
+            detail = "Menyelesaikan simulasi dengan skor $score",
+            timestamp = System.currentTimeMillis()
+        )
+        historyDao.insertHistory(entry)
+    }
 }
 
 class ChatRepositoryImpl(

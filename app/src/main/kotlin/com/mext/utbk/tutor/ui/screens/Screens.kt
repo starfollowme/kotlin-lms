@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -1164,46 +1165,548 @@ fun PlannerScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SimulationScreen(onBack: () -> Unit) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Simulasi Ujian") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+fun SimulationScreen(
+    viewModel: SimulationViewModel,
+    onBack: () -> Unit
+) {
+    val questions by viewModel.questions.collectAsState()
+    val currentIndex by viewModel.currentQuestionIndex.collectAsState()
+    val selectedAnswers by viewModel.selectedAnswers.collectAsState()
+    val isSubmitted by viewModel.isSubmitted.collectAsState()
+    val timerString by viewModel.timerString.collectAsState()
+    val timeLeft by viewModel.timeLeft.collectAsState()
+    val score by viewModel.score.collectAsState()
+    val examType by viewModel.examType.collectAsState()
+
+    // Flag to track if simulation has started (questions list is not empty)
+    val hasStarted = questions.isNotEmpty()
+
+    if (!hasStarted) {
+        // Landing selection page
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Simulasi Ujian", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                        }
                     }
-                }
-            )
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                )
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Icon(
                     imageVector = Icons.Default.Assignment,
                     contentDescription = "Simulasi",
-                    modifier = Modifier.size(72.dp),
+                    modifier = Modifier.size(80.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Simulasi Ujian UTBK & MEXT",
+                    text = "Mulai Ujian Mini Simulasi",
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.headlineSmall
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Fitur simulasi dengan durasi waktu lengkap akan segera hadir pada langkah pengerjaan berikutnya.",
+                    text = "Uji kemampuan Anda dalam batas waktu 10 menit dengan 5 soal komprehensif pilihan.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.startSimulation("UTBK") },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Simulasi UTBK", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Tes Potensi Skolastik & Literasi UTBK SNBT", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                        }
+                        Icon(Icons.Default.ArrowForward, contentDescription = "Pilih", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.startSimulation("MEXT") },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Simulasi MEXT", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.secondary)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Beasiswa Pemerintah Jepang (Monbukagakusho)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                        }
+                        Icon(Icons.Default.ArrowForward, contentDescription = "Pilih", tint = MaterialTheme.colorScheme.secondary)
+                    }
+                }
+            }
+        }
+    } else if (!isSubmitted) {
+        // Active simulation session
+        val currentQuestion = questions.getOrNull(currentIndex)
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Simulasi $examType", fontWeight = FontWeight.Bold) },
+                    actions = {
+                        val timerColor = if (timeLeft < 60) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = timerColor.copy(alpha = 0.12f)),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, timerColor.copy(alpha = 0.3f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Timer,
+                                    contentDescription = "Sisa Waktu",
+                                    tint = timerColor,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = timerString,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = timerColor
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                    }
+                )
+            }
+        ) { padding ->
+            if (currentQuestion != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp)
+                ) {
+                    // Question text
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Soal ${currentIndex + 1} dari ${questions.size}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = currentQuestion.questionText,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Option items
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        currentQuestion.options.forEachIndexed { optIndex, optionText ->
+                            val isSelected = selectedAnswers[currentIndex] == optIndex
+                            val optionBorderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                            val optionBg = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.selectAnswer(currentIndex, optIndex) },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(if (isSelected) 2.dp else 1.dp, optionBorderColor),
+                                colors = CardDefaults.cardColors(containerColor = optionBg)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val prefix = when (optIndex) {
+                                        0 -> "A"
+                                        1 -> "B"
+                                        2 -> "C"
+                                        3 -> "D"
+                                        else -> ""
+                                    }
+                                    Card(
+                                        shape = RoundedCornerShape(6.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                                        ),
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = prefix,
+                                                fontWeight = FontWeight.Bold,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(text = optionText, style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        }
+                    }
+
+                    // Jump navigator row
+                    Text("Lembar Jawaban:", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        questions.forEachIndexed { idx, _ ->
+                            val isAnswered = selectedAnswers.containsKey(idx)
+                            val isCurrent = idx == currentIndex
+                            val btnColor = if (isCurrent) {
+                                MaterialTheme.colorScheme.primary
+                            } else if (isAnswered) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            }
+                            val txtColor = if (isCurrent) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            }
+
+                            Card(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { viewModel.setCurrentQuestion(idx) },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(containerColor = btnColor),
+                                border = if (isCurrent) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "${idx + 1}",
+                                        fontWeight = FontWeight.Bold,
+                                        color = txtColor,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Next/Prev & submit action row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { viewModel.setCurrentQuestion(currentIndex - 1) },
+                            enabled = currentIndex > 0,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Sebelumnya")
+                        }
+
+                        if (currentIndex < questions.size - 1) {
+                            Button(
+                                onClick = { viewModel.setCurrentQuestion(currentIndex + 1) },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Berikutnya")
+                            }
+                        } else {
+                            Button(
+                                onClick = { viewModel.submitSimulation() },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Kirim Jawaban", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // Result & Review summary screen
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Hasil Simulasi $examType", fontWeight = FontWeight.Bold) }
+                )
+            }
+        ) { padding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Score card
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (score >= 70) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+                        ),
+                        border = BorderStroke(1.dp, if (score >= 70) Color(0xFFC8E6C9) else Color(0xFFFFCDD2))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = if (score >= 70) "Selamat! Ujian Berhasil" else "Terus Berlatih!",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = if (score >= 70) Color(0xFF2E7D32) else Color(0xFFC62828)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "$score",
+                                style = MaterialTheme.typography.displayLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (score >= 70) Color(0xFF2E7D32) else Color(0xFFC62828)
+                            )
+                            Text(
+                                text = "Skor Akhir Ujian",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
+
+                // Stats breakdown
+                item {
+                    var correctCount = 0
+                    questions.forEachIndexed { index, _ ->
+                        if (selectedAnswers[index] == questions[index].correctAnswerIndex) correctCount++
+                    }
+                    val incorrectCount = questions.size - correctCount
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceAround
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Benar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                                Text("$correctCount Soal", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = Color(0xFF2E7D32))
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Salah", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                                Text("$incorrectCount Soal", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = Color(0xFFC62828))
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Total Soal", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                                Text("${questions.size}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            }
+                        }
+                    }
+                }
+
+                // Review heading
+                item {
+                    Text(
+                        text = "Pembahasan Soal & Jawaban",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // Review items list
+                itemsIndexed(questions) { index, question ->
+                    val chosen = selectedAnswers[index]
+                    val isCorrect = chosen == question.correctAnswerIndex
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Soal ${index + 1}",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isCorrect) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+                                    ),
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = if (isCorrect) "Benar" else "Salah",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        color = if (isCorrect) Color(0xFF2E7D32) else Color(0xFFC62828)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(text = question.questionText, style = MaterialTheme.typography.bodyMedium)
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Choices review
+                            question.options.forEachIndexed { optIndex, optionText ->
+                                val isChosen = chosen == optIndex
+                                val isCorrectOption = optIndex == question.correctAnswerIndex
+
+                                val textBgColor = if (isCorrectOption) {
+                                    Color(0xFFE8F5E9)
+                                } else if (isChosen) {
+                                    Color(0xFFFFEBEE)
+                                } else {
+                                    Color.Transparent
+                                }
+
+                                val textBorderColor = if (isCorrectOption) {
+                                    Color(0xFFC8E6C9)
+                                } else if (isChosen) {
+                                    Color(0xFFFFCDD2)
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+                                }
+
+                                val iconIndicator = if (isCorrectOption) "✓" else if (isChosen) "✗" else ""
+
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = textBgColor),
+                                    border = BorderStroke(1.dp, textBorderColor),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = optionText,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        if (iconIndicator.isNotEmpty()) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = iconIndicator,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = if (isCorrectOption) Color(0xFF2E7D32) else Color(0xFFC62828)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Explanation
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = "Penjelasan:",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(text = question.explanation, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Return button
+                item {
+                    Button(
+                        onClick = {
+                            viewModel.startSimulation("") // Clear mock simulation state
+                            onBack()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Kembali ke Beranda", fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }
