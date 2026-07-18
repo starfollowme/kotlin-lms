@@ -1,24 +1,4 @@
-plugins {
-    kotlin("jvm") version "1.9.22"
-    application
-}
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation(kotlin("test"))
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-
-kotlin {
-    jvmToolchain(17)
-}
-
-application {
-    mainClass.set("MainKt")
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+tasks.register("clean", Delete::class) {
+    delete(rootProject.layout.buildDirectory)
 }
