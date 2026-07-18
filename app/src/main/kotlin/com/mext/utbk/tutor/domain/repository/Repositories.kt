@@ -15,6 +15,8 @@ interface MaterialRepository {
 interface QuizRepository {
     suspend fun generateQuestions(topicId: String): List<QuizQuestion>
     suspend fun submitQuizResult(score: Int, totalQuestions: Int)
+    suspend fun getHistory(): List<HistoryEntry>
+    suspend fun clearHistory()
 }
 
 interface ChatRepository {

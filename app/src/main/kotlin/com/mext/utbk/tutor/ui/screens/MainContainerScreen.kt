@@ -26,7 +26,7 @@ fun MainContainerScreen(
     quizViewModel: QuizViewModel,
     chatViewModel: ChatViewModel,
     plannerViewModel: PlannerViewModel,
-    historyViewModel: PlannerViewModel
+    historyViewModel: HistoryViewModel
 ) {
     val nestedNavController = rememberNavController()
     val navBackStackEntry by nestedNavController.currentBackStackEntryAsState()
@@ -62,32 +62,26 @@ fun MainContainerScreen(
                                 }
                             }
                         },
-                        icon = { Icon(imageVector = icon, contentDescription = screen.title) },
-                        label = { Text(screen.title) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
+                        icon = { Icon(icon, contentDescription = screen.title) },
+                        label = { Text(screen.title) }
                     )
                 }
             }
         }
-    ) { innerPadding ->
+    ) { padding ->
         NavHost(
             navController = nestedNavController,
             startDestination = Screen.Home.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.fillMaxSize()
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(
                     materialViewModel = materialViewModel,
                     plannerViewModel = plannerViewModel,
-                    onNavigateToMaterials = { nestedNavController.navigate(Screen.Materials.route) },
+                    onNavigateToMaterials = { rootNavController.navigate(Screen.Materials.route) },
                     onNavigateToQuiz = { rootNavController.navigate(Screen.Quiz.route) },
-                    onNavigateToChat = { nestedNavController.navigate(Screen.Chat.route) },
-                    onNavigateToPlanner = { nestedNavController.navigate(Screen.Planner.route) },
+                    onNavigateToChat = { rootNavController.navigate(Screen.Chat.route) },
+                    onNavigateToPlanner = { rootNavController.navigate(Screen.Planner.route) },
                     onNavigateToSimulation = { rootNavController.navigate(Screen.Simulation.route) }
                 )
             }
@@ -117,55 +111,9 @@ fun MainContainerScreen(
             }
 
             composable(Screen.History.route) {
-                HistoryPlaceholderScreen(onBack = { nestedNavController.navigate(Screen.Home.route) })
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun HistoryPlaceholderScreen(onBack: () -> Unit) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Riwayat Belajar") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    imageVector = Icons.Default.History,
-                    contentDescription = "Riwayat",
-                    modifier = Modifier.size(72.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Riwayat Belajar Anda",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Riwayat chat, latihan soal, dan skor Anda akan dicatat dan ditampilkan lengkap di sini.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                HistoryScreen(
+                    viewModel = historyViewModel,
+                    onBack = { nestedNavController.navigate(Screen.Home.route) }
                 )
             }
         }

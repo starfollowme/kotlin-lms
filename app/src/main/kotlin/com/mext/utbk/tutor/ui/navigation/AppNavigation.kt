@@ -16,7 +16,8 @@ fun AppNavigation(
     materialViewModel: MaterialViewModel,
     quizViewModel: QuizViewModel,
     chatViewModel: ChatViewModel,
-    plannerViewModel: PlannerViewModel
+    plannerViewModel: PlannerViewModel,
+    historyViewModel: HistoryViewModel
 ) {
     NavHost(
         navController = navController,
@@ -30,7 +31,7 @@ fun AppNavigation(
                 quizViewModel = quizViewModel,
                 chatViewModel = chatViewModel,
                 plannerViewModel = plannerViewModel,
-                historyViewModel = plannerViewModel
+                historyViewModel = historyViewModel
             )
         }
 

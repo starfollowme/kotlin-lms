@@ -226,3 +226,64 @@ class PlannerViewModel(private val repository: PlannerRepository) : ViewModel() 
         }
     }
 }
+
+class HistoryViewModel(
+    private val quizRepository: QuizRepository,
+    private val plannerRepository: PlannerRepository,
+    private val materialRepository: MaterialRepository
+) : ViewModel() {
+    private val _history = MutableStateFlow<List<HistoryEntry>>(emptyList())
+    val history: StateFlow<List<HistoryEntry>> = _history
+
+    private val _statsQuizzes = MutableStateFlow(0)
+    val statsQuizzes: StateFlow<Int> = _statsQuizzes
+
+    private val _statsAvgScore = MutableStateFlow(0)
+    val statsAvgScore: StateFlow<Int> = _statsAvgScore
+
+    private val _statsPlans = MutableStateFlow(0)
+    val statsPlans: StateFlow<Int> = _statsPlans
+
+    private val _statsBookmarks = MutableStateFlow(0)
+    val statsBookmarks: StateFlow<Int> = _statsBookmarks
+
+    init {
+        loadHistoryAndStats()
+    }
+
+    fun loadHistoryAndStats() {
+        viewModelScope.launch {
+            val hist = quizRepository.getHistory()
+            _history.value = hist
+
+            // Calculate quiz stats
+            val quizEntries = hist.filter { it.type == "QUIZ" }
+            _statsQuizzes.value = quizEntries.size
+
+            var totalScore = 0
+            quizEntries.forEach { entry ->
+                // Detail pattern: "Menyelesaikan kuis dengan skor X ..."
+                val scoreMatch = Regex("skor (\\d+)").find(entry.detail)
+                scoreMatch?.groupValues?.getOrNull(1)?.toIntOrNull()?.let {
+                    totalScore += it
+                }
+            }
+            _statsAvgScore.value = if (quizEntries.isNotEmpty()) totalScore / quizEntries.size else 0
+
+            // Calculate planner stats
+            val completedPlans = plannerRepository.getStudyPlans().count { it.isCompleted }
+            _statsPlans.value = completedPlans
+
+            // Calculate bookmark stats
+            val bookmarksCount = materialRepository.getBookmarkedTopics().size
+            _statsBookmarks.value = bookmarksCount
+        }
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch {
+            quizRepository.clearHistory()
+            loadHistoryAndStats()
+        }
+    }
+}

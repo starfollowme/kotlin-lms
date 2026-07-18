@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
         val quizViewModel = QuizViewModel(quizRepository)
         val chatViewModel = ChatViewModel(chatRepository)
         val plannerViewModel = PlannerViewModel(plannerRepository)
+        val historyViewModel = HistoryViewModel(quizRepository, plannerRepository, materialRepository)
 
         setContent {
             MextUtbkTutorTheme {
@@ -42,7 +43,8 @@ class MainActivity : ComponentActivity() {
                         materialViewModel = materialViewModel,
                         quizViewModel = quizViewModel,
                         chatViewModel = chatViewModel,
-                        plannerViewModel = plannerViewModel
+                        plannerViewModel = plannerViewModel,
+                        historyViewModel = historyViewModel
                     )
                 }
             }

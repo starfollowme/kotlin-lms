@@ -116,6 +116,15 @@ class QuizRepositoryImpl(private val historyDao: HistoryDao) : QuizRepository {
         )
         historyDao.insertHistory(entry)
     }
+
+    override suspend fun getHistory(): List<HistoryEntry> {
+        val entities = historyDao.getAllHistory().first()
+        return entities.map { HistoryEntry(it.id, it.type, it.title, it.detail, it.timestamp) }
+    }
+
+    override suspend fun clearHistory() {
+        historyDao.clearHistory()
+    }
 }
 
 class ChatRepositoryImpl(
