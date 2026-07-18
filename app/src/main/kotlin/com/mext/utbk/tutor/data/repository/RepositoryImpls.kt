@@ -4,6 +4,10 @@ import com.mext.utbk.tutor.data.local.dao.*
 import com.mext.utbk.tutor.data.local.entity.*
 import com.mext.utbk.tutor.domain.model.*
 import com.mext.utbk.tutor.domain.repository.*
+import com.mext.utbk.tutor.BuildConfig
+import com.mext.utbk.tutor.data.remote.OpenRouterService
+import com.mext.utbk.tutor.data.remote.model.ApiChatMessage
+import com.mext.utbk.tutor.data.remote.model.ChatRequest
 import kotlinx.coroutines.flow.first
 
 class MaterialRepositoryImpl(private val bookmarkDao: BookmarkDao) : MaterialRepository {
@@ -114,7 +118,10 @@ class QuizRepositoryImpl(private val historyDao: HistoryDao) : QuizRepository {
     }
 }
 
-class ChatRepositoryImpl(private val chatDao: ChatDao) : ChatRepository {
+class ChatRepositoryImpl(
+    private val chatDao: ChatDao,
+    private val apiService: OpenRouterService
+) : ChatRepository {
     override suspend fun getChatHistory(): List<ChatMessage> {
         val entities = chatDao.getAllMessages().first()
         return entities.map { ChatMessage(it.id, it.sender, it.messageText, it.timestamp) }
@@ -130,8 +137,32 @@ class ChatRepositoryImpl(private val chatDao: ChatDao) : ChatRepository {
         )
         chatDao.insertMessage(userEntity)
 
-        // Generate AI Response
-        val responseText = "Pertanyaan Anda: \"$message\".\n\nUntuk menjawab ini, mari kita breakdown konsep dasarnya terlebih dahulu. Di MEXT/UTBK, materi ini biasanya diselesaikan dengan rumus atau cara eliminasi cepat. \n\nMisalkan kita memiliki variabel x dan y, kita dapat mensubstitusikannya ke persamaan utama. Apakah ada langkah spesifik yang ingin Anda tanyakan lebih detail?"
+        // Fetch recent history from DB for conversation context (last 10 messages)
+        val historyEntities = chatDao.getAllMessages().first().takeLast(10)
+        val apiMessages = historyEntities.map {
+            ApiChatMessage(
+                role = if (it.sender == "USER") "user" else "assistant",
+                content = it.messageText
+            )
+        }
+
+        // Call OpenRouter API
+        val responseText = try {
+            val response = apiService.getChatCompletion(
+                authorization = "Bearer ${BuildConfig.OPENROUTER_API_KEY}",
+                referer = "https://github.com/starfollowme/kotlin-lms",
+                title = "MEXT UTBK Tutor",
+                request = ChatRequest(
+                    model = "tencent/hy3:free",
+                    messages = apiMessages
+                )
+            )
+            response.choices.firstOrNull()?.message?.content ?: "Maaf, tidak ada respon dari tutor."
+        } catch (e: Exception) {
+            e.printStackTrace()
+            "Koneksi internet bermasalah atau API Key tidak valid. Silakan periksa kembali jaringan Anda. Error: ${e.localizedMessage}"
+        }
+
         val aiEntity = ChatMessageEntity(
             id = "ai_${System.currentTimeMillis() + 1}",
             sender = "AI",

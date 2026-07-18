@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.mext.utbk.tutor.data.local.AppDatabase
+import com.mext.utbk.tutor.data.remote.ApiClient
 import com.mext.utbk.tutor.data.repository.*
 import com.mext.utbk.tutor.ui.navigation.AppNavigation
 import com.mext.utbk.tutor.ui.theme.MextUtbkTutorTheme
@@ -23,7 +24,7 @@ class MainActivity : ComponentActivity() {
         // Inisialisasi Repositori dengan DAO masing-masing
         val materialRepository = MaterialRepositoryImpl(database.bookmarkDao())
         val quizRepository = QuizRepositoryImpl(database.historyDao())
-        val chatRepository = ChatRepositoryImpl(database.chatDao())
+        val chatRepository = ChatRepositoryImpl(database.chatDao(), ApiClient.service)
         val plannerRepository = PlannerRepositoryImpl(database.studyPlanDao())
 
         // Inisialisasi ViewModel dengan menyuntikkan Repositori
