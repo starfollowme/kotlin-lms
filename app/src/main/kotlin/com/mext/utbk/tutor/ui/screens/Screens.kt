@@ -624,10 +624,12 @@ fun QuizScreen(
     val isAnswerSubmitted by viewModel.isAnswerSubmitted.collectAsState()
     val score by viewModel.score.collectAsState()
 
+    var showResultSummary by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Latihan Soal") },
+                title = { Text(if (showResultSummary) "Hasil Latihan" else "Latihan Soal", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
@@ -636,7 +638,138 @@ fun QuizScreen(
             )
         }
     ) { padding ->
-        if (questions.isNotEmpty()) {
+        if (showResultSummary) {
+            val total = questions.size
+            val correctCount = score / 50
+            val incorrectCount = total - correctCount
+            val accuracy = if (total > 0) (correctCount.toFloat() / total * 100).toInt() else 0
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Trophy / Celebration Icon
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9E6)),
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.size(80.dp),
+                        border = BorderStroke(1.dp, Color(0xFFFFD54F))
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = "Trophy",
+                                tint = Color(0xFFF57F17),
+                                modifier = Modifier.size(48.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "Selamat! Kuis Selesai",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+
+                    Text(
+                        text = "Anda telah menyelesaikan latihan soal untuk bab ini. Terus tingkatkan kemampuan belajar Anda!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Circular Progress Score Visual
+                    Box(
+                        modifier = Modifier.size(160.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            progress = { correctCount.toFloat() / total },
+                            modifier = Modifier.fillMaxSize(),
+                            strokeWidth = 10.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "$score",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.displayMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Total Skor",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Breakdown statistics card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceAround
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(text = "✅ Benar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = "$correctCount Soal", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = Color(0xFF2E7D32))
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(text = "❌ Salah", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = "$incorrectCount Soal", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = Color(0xFFC62828))
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(text = "🎯 Akurasi", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = "$accuracy%", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
+
+                // CTA Button
+                Button(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "Kembali ke Beranda",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
+        } else if (questions.isNotEmpty()) {
             val currentQuestion = questions[currentQuestionIndex]
 
             Column(
@@ -728,7 +861,7 @@ fun QuizScreen(
                             if (currentQuestionIndex < questions.size - 1) {
                                 viewModel.nextQuestion()
                             } else {
-                                onBack()
+                                showResultSummary = true
                             }
                         },
                         modifier = Modifier.fillMaxWidth()
